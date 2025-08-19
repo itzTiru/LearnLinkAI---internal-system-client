@@ -1,103 +1,93 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [message, setMessage] = useState("Loading...");
+  const [dotStyles, setDotStyles] = useState([]);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Fetch message from FastAPI backend
+  useEffect(() => {
+    fetch("http://localhost:8000/api/message")
+      .then((response) => response.json())
+      .then((data) => setMessage(data.message))
+      .catch((error) => {
+        console.error("Error fetching message:", error);
+        setMessage("Failed to connect to backend");
+      });
+  }, []);
+
+  // Generate dot styles on client mount to avoid SSR mismatch
+  useEffect(() => {
+    const styles = [...Array(30)].map((_, i) => ({
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      animationDelay: `${Math.random() * 3}s`,
+    }));
+    setDotStyles(styles);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-white-100 text-gray-700 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Enhanced Galaxy Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-100/40 via-purple-100/40 to-white/60 animate-starfield-enhanced z-0"></div>
+
+      {/* Blinking Starry Dots Effect */}
+      <div className="absolute inset-0 pointer-events-none z-10">
+        {dotStyles.map((style, i) => (
+          <div
+            key={i}
+            className="absolute w-0.5 h-0.5 bg-purple-500/50 rounded-full animate-blink-star"
+            style={style}
+          ></div>
+        ))}
+      </div>
+
+      {/* Pulsing Orbit Lines */}
+      <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none z-20">
+        <div className="flex space-x-2">
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              className="w-1 h-10 bg-gradient-to-t from-blue-300/60 to-purple-300/60 animate-orbit-pulse-enhanced"
+              style={{ animationDelay: `${i * 0.3}s`, opacity: 0.9 - i * 0.15 }}
+            ></div>
+          ))}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-30 flex flex-col items-center justify-center text-center space-y-8">
+        <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500 animate-text-shimmer-enhanced">
+          {message}
+        </h1>
+        <p className="text-lg md:text-xl text-gray-600/90 max-w-md animate-fade-in-enhanced">
+          Discover cutting-edge learning experiences
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Link
+            href="/upload-pdf"
+            className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-400 hover:scale-105 transition-all duration-300 animate-button-glow-enhanced shadow-md"
+          >
+            Upload PDF
+          </Link>
+          <Link
+            href="/search"
+            className="px-8 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-400 hover:scale-105 transition-all duration-300 animate-button-glow-enhanced shadow-md"
+            style={{ animationDelay: '0.2s' }}
+          >
+            Search
+          </Link>
+          <Link
+            href="/voice-chat"
+            className="px-8 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-400 hover:scale-105 transition-all duration-300 animate-button-glow-enhanced shadow-md"
+            style={{ animationDelay: '0.4s' }}
+          >
+            Voice Chat
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

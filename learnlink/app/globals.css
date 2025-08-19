@@ -3,24 +3,164 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --white-100: #F5F7FA;
+  --blue-100: #E6EFFF;
+  --blue-300: #B3C9FF;
+  --blue-400: #8BAFFF;
+  --blue-500: #5E87FF;
+  --purple-100: #F0E6FF;
+  --purple-300: #D8B4FF;
+  --purple-500: #A366FF;
+  --gray-500: #6B7280;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans, system-ui, -apple-system, BlinkMacSystemFont, sans-serif);
+  --font-mono: var(--font-geist-mono, "Courier New", monospace);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: var(--white-100);
+    --foreground: var(--gray-700);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* Animation Keyframes */
+@keyframes starfield-enhanced {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 200% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes blink-star {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes orbit-pulse-enhanced {
+  0%, 100% {
+    transform: scaleY(0.5);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scaleY(1.4);
+    opacity: 1;
+  }
+}
+
+@keyframes text-shimmer-enhanced {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(94, 135, 255, 0.3), 0 0 10px rgba(163, 102, 255, 0.2);
+  }
+  50% {
+    text-shadow: 0 0 8px rgba(94, 135, 255, 0.5), 0 0 15px rgba(163, 102, 255, 0.4);
+  }
+}
+
+@keyframes fade-in-enhanced {
+  0% {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes button-glow-enhanced {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Animation Classes */
+.animate-starfield-enhanced {
+  background-size: 400% 400%;
+  animation: starfield-enhanced 25s ease infinite;
+}
+
+.animate-blink-star {
+  animation: blink-star 3.5s ease-in-out infinite;
+}
+
+.animate-orbit-pulse-enhanced {
+  animation: orbit-pulse-enhanced 2.8s ease-in-out infinite;
+}
+
+.animate-text-shimmer-enhanced {
+  animation: text-shimmer-enhanced 3.2s ease-in-out infinite;
+}
+
+.animate-fade-in-enhanced {
+  animation: fade-in-enhanced 1.5s ease-out forwards;
+}
+
+.animate-button-glow-enhanced {
+  animation: button-glow-enhanced 0.7s ease-out forwards;
+}
+
+/* Custom Tailwind Utilities */
+@layer utilities {
+  .bg-white-100 {
+    background-color: var(--white-100);
+  }
+  .bg-blue-100 {
+    background-color: var(--blue-100);
+  }
+  .bg-blue-300 {
+    background-color: var(--blue-300);
+  }
+  .bg-blue-400 {
+    background-color: var(--blue-400);
+  }
+  .bg-blue-500 {
+    background-color: var(--blue-500);
+  }
+  .text-blue-400 {
+    color: var(--blue-400);
+  }
+  .bg-purple-100 {
+    background-color: var(--purple-100);
+  }
+  .bg-purple-300 {
+    background-color: var(--purple-300);
+  }
+  .bg-purple-500 {
+    background-color: var(--purple-500);
+  }
+  .text-gray-600 {
+    color: var(--gray-600);
+  }
+  .bg-gray-500 {
+    background-color: var(--gray-500);
+  }
 }
