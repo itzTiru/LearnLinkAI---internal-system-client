@@ -20,7 +20,7 @@ export default function EducationSearchPage() {
       const response = await axios.post(endpoint, {
         query,
         max_results: 10,
-        platforms: ['youtube', 'web'],
+        platforms: ['web'],
       });
       setResults(response.data.results || []);
     } catch (err) {
@@ -39,7 +39,7 @@ export default function EducationSearchPage() {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [query, aiMode]); // Add aiMode to trigger search on toggle
+  }, [query, aiMode]); 
 
   const toggleAiMode = () => {
     setAiMode(!aiMode);
@@ -139,13 +139,14 @@ export default function EducationSearchPage() {
                   {result.description}
                 </p>
                 <a
-                  href={result.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 text-sm font-medium hover:underline"
-                >
-                  View {result.platform === 'youtube' ? 'Video' : 'Resource'}
-                </a>
+  href={result.url ? result.url.replace(/^\[|]$/g, '').replace('https:/', 'https://') : '#'}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="text-blue-500 text-sm font-medium hover:underline"
+>
+  View {result.platform === 'youtube' ? 'Video' : 'Resource'}
+</a>
+
               </div>
             ))
         ) : (
