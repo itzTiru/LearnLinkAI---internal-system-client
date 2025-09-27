@@ -11,9 +11,30 @@ export default function EducationSearchPage() {
   const [platform, setPlatform] = useState('all');
   const [aiMode, setAiMode] = useState(false);
   const [isFading, setIsFading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
   const threeSceneRef = useRef(null);
 
-  const handleSearch = async () => {
+  // -------------------
+  // Clean text utility (improved)
+  // -------------------
+  const cleanTranscript = (text) => {
+    return text
+      .normalize("NFKD")                  // normalize unicode
+      .replace(/[^\p{L}\p{N}\s]/gu, "")   // remove all non-letters/numbers
+      .replace(/\s+/g, " ")               // collapse multiple spaces
+      .trim()
+      .toLowerCase();                     // lowercase for consistency
+  };
+
+  const handleSearch = async (customQuery) => {
+    const q = customQuery ?? query;
+    if (!q.trim()) {
+      setResults([]);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -21,9 +42,9 @@ export default function EducationSearchPage() {
         ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/aiinfo`
         : `${process.env.NEXT_PUBLIC_BACKEND_URL}/search`;
       const response = await axios.post(endpoint, {
-        query,
+        query: q,
         max_results: 10,
-        platforms: ['web'],
+        platforms: ['web', 'youtube'],
       });
       setResults(response.data.results || []);
     } catch (err) {
@@ -33,13 +54,11 @@ export default function EducationSearchPage() {
     setLoading(false);
   };
 
+  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (query.trim()) {
-        handleSearch();
-      } else {
-        setResults([]);
-      }
+      if (query.trim()) handleSearch();
+      else setResults([]);
     }, 500);
     return () => clearTimeout(timer);
   }, [query, aiMode]);
@@ -52,6 +71,54 @@ export default function EducationSearchPage() {
     }, 300);
   };
 
+  // -------------------
+  // Voice Recording
+  // -------------------
+  const handleMicClick = async () => {
+    if (recording) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const formData = new FormData();
+          formData.append('file', blob, 'voice.webm');
+
+          try {
+            const resp = await axios.post(
+              `${process.env.NEXT_PUBLIC_BACKEND_URL}/transcribe`,
+              formData,
+              { headers: { 'Content-Type': 'multipart/form-data' } }
+            );
+            let transcript = resp.data.text || '';
+            transcript = cleanTranscript(transcript); // 🔹 Clean text
+            setQuery(transcript);
+            handleSearch(transcript);
+          } catch (err) {
+            console.error('Transcription error:', err);
+            setError('Voice transcription failed. Try again.');
+          }
+        };
+
+        mediaRecorder.start();
+        setRecording(true);
+      } catch (err) {
+        console.error('Microphone access error:', err);
+        setError('Microphone access denied.');
+      }
+    }
+  };
+
   const recommendations = [
     { title: 'Beginner Python Tutorial', platform: 'youtube', description: 'Learn Python basics with hands-on examples.' },
     { title: 'Introduction to React', platform: 'web', description: 'Master React for building modern web apps.' },
@@ -61,7 +128,6 @@ export default function EducationSearchPage() {
 
   return (
     <div className="relative min-h-screen" style={{ willChange: 'contents' }}>
-      {/* 3D AI Background Scene */}
       <div
         ref={threeSceneRef}
         className={`fixed inset-0 z-0 transition-opacity duration-300 ${aiMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
@@ -70,64 +136,49 @@ export default function EducationSearchPage() {
       </div>
 
       <div
-        className={`relative z-10 min-h-screen p-6 transition-opacity duration-300 ${
-          aiMode ? 'bg-transparent text-white' : 'bg-gray-50 text-gray-900'
-        } ${isFading ? 'opacity-0' : 'opacity-100'}`}
+        className={`relative z-10 min-h-screen p-6 transition-opacity duration-300 ${aiMode ? 'bg-transparent text-white' : 'bg-gray-50 text-gray-900'} ${isFading ? 'opacity-0' : 'opacity-100'}`}
         style={{ willChange: 'opacity' }}
       >
+        {/* Header */}
         <div className="max-w-4xl mx-auto text-center mb-12">
           <h1 className="text-4xl font-bold mb-3">
             {aiMode ? (
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 animate-pulse">
                 AI-Powered Knowledge Hub
               </span>
-            ) : (
-              'Educational Content Search'
-            )}
+            ) : 'Educational Content Search'}
           </h1>
           <p className={`text-lg ${aiMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            {aiMode ? (
-              <>
-                Unlock a universe of tutorials, courses, and insights with AI precision.
-                <br />
-                <span className="italic text-sm text-blue-300">Navigate the cosmos of learning!</span>
-              </>
-            ) : (
-              <>
-                Discover tutorials, courses, and resources to enhance your learning.
-                <br />
-                <span className="italic text-sm">Explore a wide range of topics from programming to science!</span>
-              </>
-            )}
+            {aiMode
+              ? <>Unlock a universe of tutorials, courses, and insights with AI precision.<br /><span className="italic text-sm text-blue-300">Navigate the cosmos of learning!</span></>
+              : <>Discover tutorials, courses, and resources to enhance your learning.<br /><span className="italic text-sm">Explore a wide range of topics from programming to science!</span></>}
           </p>
         </div>
 
-        {/* Search Input */}
-        <div className="max-w-lg mx-auto mb-8 relative">
+        {/* Search Input + Mic */}
+        <div className="max-w-lg mx-auto mb-8 relative flex items-center">
           <input
             type="text"
             placeholder={aiMode ? '🔍 Search the knowledge galaxy (e.g., AI, Quantum)' : '🔍 Search for tutorials (e.g., Python, React)'}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className={`w-full px-4 py-3 rounded-xl border shadow-lg ${
-              aiMode ? 'border-gray-600 bg-gray-800/80 text-white backdrop-blur-sm' : 'border-gray-300 bg-white text-gray-900'
-            } focus:ring-2 focus:outline-none transition-all duration-300 ${
-              aiMode ? 'focus:ring-purple-500' : 'focus:ring-blue-500'
-            }`}
+            onChange={(e) => setQuery(cleanTranscript(e.target.value))}
+            className={`w-full px-4 py-3 rounded-xl border shadow-lg ${aiMode ? 'border-gray-600 bg-gray-800/80 text-white backdrop-blur-sm' : 'border-gray-300 bg-white text-gray-900'} focus:ring-2 focus:outline-none transition-all duration-300 ${aiMode ? 'focus:ring-purple-500' : 'focus:ring-blue-500'}`}
           />
           <button
+            onClick={handleMicClick}
+            className={`ml-2 p-3 rounded-full border shadow-md transition-all duration-200 ${recording ? 'bg-red-500 animate-pulse text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+          >
+            {recording ? '🎙️' : '🎤'}
+          </button>
+          <button
             onClick={toggleAiMode}
-            className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 text-white rounded-md transition-all duration-200 hover:scale-105 ${
-              aiMode
-                ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 animate-pulse'
-                : 'bg-blue-500 hover:bg-blue-600'
-            }`}
+            className={`ml-2 px-3 py-1 text-white rounded-md transition-all duration-200 hover:scale-105 ${aiMode ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 animate-pulse' : 'bg-blue-500 hover:bg-blue-600'}`}
           >
             AI {aiMode ? 'On' : 'Off'}
           </button>
         </div>
 
-        {/* Recommendations (only for normal mode) */}
+        {/* Results & Recommendations */}
         {!aiMode && !loading && results.length === 0 && (
           <div className="max-w-4xl mx-auto mb-10">
             <h2 className="text-xl font-semibold mb-4 text-gray-900">Recommended Learning Resources</h2>
@@ -135,7 +186,7 @@ export default function EducationSearchPage() {
               {recommendations.map((rec, idx) => (
                 <div
                   key={idx}
-                  onClick={() => setQuery(rec.title)}
+                  onClick={() => setQuery(cleanTranscript(rec.title))}
                   className="p-4 rounded-lg bg-white hover:bg-gray-100 shadow-md cursor-pointer transition-transform duration-200 hover:scale-102"
                 >
                   <h3 className="text-lg font-medium">{rec.title}</h3>
@@ -146,22 +197,13 @@ export default function EducationSearchPage() {
           </div>
         )}
 
-        {/* Error Message */}
-        {error && (
-          <p className={`text-center ${aiMode ? 'text-red-400' : 'text-red-600'} mb-6`}>
-            {error}
-          </p>
-        )}
+        {error && <p className={`text-center ${aiMode ? 'text-red-400' : 'text-red-600'} mb-6`}>{error}</p>}
 
         {/* Search Results */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
           {loading ? (
             <div className="col-span-full text-center">
-              <div
-                className={`inline-block w-8 h-8 border-4 ${
-                  aiMode ? 'border-purple-500' : 'border-blue-500'
-                } border-t-transparent rounded-full animate-spin`}
-              ></div>
+              <div className={`inline-block w-8 h-8 border-4 ${aiMode ? 'border-purple-500' : 'border-blue-500'} border-t-transparent rounded-full animate-spin`}></div>
               <p className={`mt-2 ${aiMode ? 'text-gray-300' : 'text-gray-600'}`}>Searching...</p>
             </div>
           ) : results.length > 0 ? (
@@ -170,24 +212,16 @@ export default function EducationSearchPage() {
               .map((result, idx) => (
                 <div
                   key={idx}
-                  className={`p-6 rounded-2xl shadow-md cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 ${
-                    aiMode ? 'bg-gray-800/80 hover:bg-gray-700/80 backdrop-blur-sm' : 'bg-white hover:bg-gray-50'
-                  } animate-fadeIn`}
+                  className={`p-6 rounded-2xl shadow-md cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 ${aiMode ? 'bg-gray-800/80 hover:bg-gray-700/80 backdrop-blur-sm' : 'bg-white hover:bg-gray-50'} animate-fadeIn`}
                   style={{ animationDelay: `${idx * 0.1}s` }}
                 >
-                  <h2 className={`text-xl font-semibold mb-2 ${aiMode ? 'text-white' : 'text-gray-900'}`}>
-                    {result.title}
-                  </h2>
-                  <p className={`mb-4 line-clamp-3 ${aiMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    {result.description}
-                  </p>
+                  <h2 className={`text-xl font-semibold mb-2 ${aiMode ? 'text-white' : 'text-gray-900'}`}>{result.title}</h2>
+                  <p className={`mb-4 line-clamp-3 ${aiMode ? 'text-gray-300' : 'text-gray-600'}`}>{result.description}</p>
                   <a
-                    href={result.url ? result.url.replace(/^\[|]$/g, '').replace('https:/', 'https://') : '#'}
+                    href={result.url || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`text-sm font-medium hover:underline ${
-                      aiMode ? 'text-purple-400' : 'text-blue-500'
-                    }`}
+                    className={`text-sm font-medium hover:underline ${aiMode ? 'text-purple-400' : 'text-blue-500'}`}
                   >
                     View {result.platform === 'youtube' ? 'Video' : 'Resource'}
                   </a>
@@ -202,18 +236,12 @@ export default function EducationSearchPage() {
 
         {/* Platform Filter */}
         <div className="max-w-lg mx-auto mt-8 flex items-center gap-4">
-          <label htmlFor="platform-filter" className={`font-semibold ${aiMode ? 'text-white' : 'text-gray-900'}`}>
-            Filter Platform:
-          </label>
+          <label htmlFor="platform-filter" className={`font-semibold ${aiMode ? 'text-white' : 'text-gray-900'}`}>Filter Platform:</label>
           <select
             id="platform-filter"
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
-            className={`px-3 py-2 rounded-md border shadow-md transition-all duration-300 focus:outline-none ${
-              aiMode
-                ? 'border-gray-600 bg-gray-800/80 text-white backdrop-blur-sm focus:ring-2 focus:ring-purple-500'
-                : 'border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500'
-            }`}
+            className={`px-3 py-2 rounded-md border shadow-md transition-all duration-300 focus:outline-none ${aiMode ? 'border-gray-600 bg-gray-800/80 text-white backdrop-blur-sm focus:ring-2 focus:ring-purple-500' : 'border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500'}`}
           >
             <option value="all">All</option>
             <option value="youtube">YouTube</option>
@@ -221,22 +249,11 @@ export default function EducationSearchPage() {
           </select>
         </div>
 
-        {/* Animation Styles */}
         <style jsx>{`
-          @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          .animate-fadeIn {
-            animation: fadeIn 0.5s ease forwards;
-          }
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-          }
-          .animate-pulse {
-            animation: pulse 2s infinite;
-          }
+          @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+          .animate-fadeIn { animation: fadeIn 0.5s ease forwards; }
+          @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
+          .animate-pulse { animation: pulse 2s infinite; }
         `}</style>
       </div>
     </div>
