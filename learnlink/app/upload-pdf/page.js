@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+
 
 export default function PdfAnalyzerPage() {
   const fileInputRef = useRef(null);
@@ -141,6 +143,14 @@ export default function PdfAnalyzerPage() {
     }
   };
 
+  const router = useRouter();
+
+  const handleSearchQueryClick = (query) => {
+    if (!query) return;
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+  };
+
+
   return (
     <div className="min-h-screen bg-[#f9fbff] flex flex-col items-center py-8 px-4">
       <div className="max-w-7xl w-full bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
@@ -221,27 +231,26 @@ export default function PdfAnalyzerPage() {
                 </div>
               )}
 
-              {/* Search Queries */}
+              {/* Suggested Search Queries */}
               {result.search_queries?.length > 0 && (
                 <div>
                   <h2 className="font-semibold text-lg text-blue-500 mb-2">
                     Suggested Search Queries
                   </h2>
                   <div className="flex flex-col gap-2">
-                    {result.search_queries.map((query, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() =>
-                          window.open(`https://www.google.com/search?q=${query}`, "_blank")
-                        }
-                        className="bg-blue-50 hover:bg-blue-100 text-blue-900 px-3 py-2 rounded-lg shadow-sm border-l-4 border-blue-400 cursor-pointer transition"
+                    {result.search_queries.map((query, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleSearchQueryClick(query)}
+                        className="bg-blue-50 hover:bg-blue-100 text-blue-800 px-4 py-2 rounded-lg shadow-sm text-left transition-all duration-200 border border-blue-200 hover:scale-105"
                       >
-                         {query}
-                      </div>
+                        🔍 {query}
+                      </button>
                     ))}
                   </div>
                 </div>
               )}
+
 
               {/* Summary */}
               {result.summary && (

@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ThreeScene from '../../components/ThreeScene';
+import { useSearchParams } from "next/navigation";
+
 
 export default function EducationSearchPage() {
   const [query, setQuery] = useState('');
@@ -18,11 +20,31 @@ export default function EducationSearchPage() {
   const audioChunksRef = useRef([]);
   const threeSceneRef = useRef(null);
 
+  
   // Load counters from localStorage when the page opens
   useEffect(() => {
     setSearchCount(0);
     setVoiceCount(0);
   }, []);
+
+  // ✅ Auto-fill from ?q= and trigger search
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q) {
+      setQuery(q);
+      handleSearch(q);
+      // Add blue glow to input
+      const input = document.getElementById("searchInput");
+      if (input) {
+        input.classList.add("ring-2", "ring-blue-400", "shadow-blue-200");
+        setTimeout(() => {
+          input.classList.remove("ring-2", "ring-blue-400", "shadow-blue-200");
+        }, 1500);
+      }
+    }
+  }, [searchParams]);
+
 
   const cleanTranscript = (text) => {
     return text
@@ -174,6 +196,7 @@ export default function EducationSearchPage() {
           <div className="relative w-full max-w-2xl flex items-center gap-3">
             {/* Search Input */}
             <input
+              id="searchInput"
               type="text"
               placeholder={aiMode ? '🔍 Search the knowledge galaxy (e.g., AI, Quantum)' : '🔍 Search for tutorials (e.g., Python, React)'}
               value={query}
@@ -181,6 +204,7 @@ export default function EducationSearchPage() {
               className={`flex-1 px-6 py-4 rounded-full border shadow-lg text-lg ${aiMode ? 'border-blue-500 bg-gray-800/80 text-white backdrop-blur-sm' : 'border-blue-500 bg-white text-gray-900'
                 } focus:ring-2 focus:outline-none transition-all duration-300 focus:ring-blue-500`}
             />
+
 
             {/* Mic Button */}
             <button
