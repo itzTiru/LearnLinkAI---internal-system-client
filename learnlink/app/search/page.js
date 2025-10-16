@@ -16,7 +16,6 @@ export default function EducationSearchPage() {
   const [recording, setRecording] = useState(false);
   const [searchCount, setSearchCount] = useState(0);
   const [voiceCount, setVoiceCount] = useState(0);
-  const [attachedFile, setAttachedFile] = useState(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const threeSceneRef = useRef(null);
@@ -24,10 +23,8 @@ export default function EducationSearchPage() {
 
   // Load counters from localStorage when the page opens
   useEffect(() => {
-    const savedSearchCount = parseInt(localStorage.getItem('searchCount') || '0');
-    const savedVoiceCount = parseInt(localStorage.getItem('voiceCount') || '0');
-    setSearchCount(savedSearchCount);
-    setVoiceCount(savedVoiceCount);
+    setSearchCount(0);
+    setVoiceCount(0);
   }, []);
 
   // Normalize user input text without removing necessary spaces
@@ -41,7 +38,7 @@ export default function EducationSearchPage() {
 
   // Handle normal searches (text-based)
   const handleSearch = async (customQuery) => {
-    const q = customQuery ?? query;
+    const q = cleanTranscript(customQuery ?? query);
     if (!q.trim()) {
       setResults([]);
       return;
@@ -59,25 +56,16 @@ export default function EducationSearchPage() {
       const endpoint = aiMode
         ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/aiinfo`
         : `${process.env.NEXT_PUBLIC_BACKEND_URL}/search`;
-
-      const formData = new FormData();
-      formData.append('query', q);
-      formData.append('max_results', 10);
-      formData.append('platforms', JSON.stringify(['web', 'youtube']));
-      if (attachedFile) {
-        formData.append('file', attachedFile);
-      }
-
-      const response = await axios.post(endpoint, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const response = await axios.post(endpoint, {
+        query: q,
+        max_results: 10,
+        platforms: ['web', 'youtube'],
       });
-
       setResults(response.data.results || []);
 
       // Update search count
       const updated = searchCount + 1;
       setSearchCount(updated);
-      localStorage.setItem('searchCount', updated);
     } catch (err) {
       setError('Search failed. Please try again.');
       console.error('Search error:', err);
@@ -144,7 +132,6 @@ export default function EducationSearchPage() {
             // Update voice count
             const updated = voiceCount + 1;
             setVoiceCount(updated);
-            localStorage.setItem('voiceCount', updated);
           } catch (err) {
             console.error('Transcription error:', err);
             setError('Voice transcription failed. Try again.');
@@ -157,14 +144,6 @@ export default function EducationSearchPage() {
         console.error('Microphone access error:', err);
         setError('Microphone access denied.');
       }
-    }
-  };
-
-  // Handle file attachment
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setAttachedFile(file);
     }
   };
 
@@ -203,32 +182,17 @@ export default function EducationSearchPage() {
           </p>
         </div>
 
-        {/* Search bar with mic, AI toggle, and attachment */}
+        {/* Search bar with mic and AI toggle */}
         <div className="flex justify-center mb-8 relative">
           <div className="relative w-full max-w-2xl flex items-center gap-3">
             <input
               type="text"
               placeholder={aiMode ? '🔍 Search the knowledge galaxy (e.g., AI, Quantum)' : '🔍 Search for tutorials (e.g., Python, React)'}
               value={query}
-              onChange={(e) => setQuery(cleanTranscript(e.target.value))}
+              onChange={(e) => setQuery(e.target.value)}
               className={`flex-1 px-6 py-4 rounded-full border shadow-lg text-lg ${aiMode ? 'border-blue-500 bg-gray-800/80 text-white backdrop-blur-sm' : 'border-blue-500 bg-white text-gray-900'
                 } focus:ring-2 focus:outline-none transition-all duration-300 focus:ring-blue-500`}
             />
-
-            {/* Attachment button */}
-            <label className="p-4 rounded-full shadow-md bg-blue-500 hover:bg-blue-600 text-white cursor-pointer transition-all duration-300 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12V7a2 2 0 00-2-2h-5M3 12v5a2 2 0 002 2h5m10-9l-9 9a3 3 0 11-4.243-4.243L15 3" />
-              </svg>
-              <input type="file" className="hidden" onChange={handleFileChange} />
-            </label>
 
             <button
               onClick={handleMicClick}
@@ -272,7 +236,6 @@ export default function EducationSearchPage() {
           </div>
         </div>
 
-        {/* The rest of your code remains unchanged below */}
         {!aiMode && !loading && results.length === 0 && (
           <div className="max-w-4xl mx-auto mb-10">
             <h2 className="text-xl font-semibold mb-4 text-gray-900">Recommended Learning Resources</h2>
@@ -293,6 +256,7 @@ export default function EducationSearchPage() {
 
         {error && <p className={`text-center ${aiMode ? 'text-red-400' : 'text-red-600'} mb-6`}>{error}</p>}
 
+        {/* Display search results */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
           {loading ? (
             <div className="col-span-full text-center">
@@ -328,6 +292,7 @@ export default function EducationSearchPage() {
           )}
         </div>
 
+        {/* Filter section */}
         <div className="max-w-lg mx-auto mt-8 flex items-center gap-4">
           <label htmlFor="platform-filter" className={`font-semibold ${aiMode ? 'text-white' : 'text-gray-900'}`}>Filter Platform:</label>
           <select
