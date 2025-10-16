@@ -1,9 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import ThreeScene from '../../components/ThreeScene';
-import Link from 'next/link';
 
 export default function EducationSearchPage() {
   const [query, setQuery] = useState('');
@@ -19,7 +17,6 @@ export default function EducationSearchPage() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const threeSceneRef = useRef(null);
-  const router = useRouter();
 
   // Load counters from localStorage when the page opens
   useEffect(() => {
@@ -27,26 +24,19 @@ export default function EducationSearchPage() {
     setVoiceCount(0);
   }, []);
 
-  // Normalize user input text without removing necessary spaces
   const cleanTranscript = (text) => {
     return text
-      .normalize('NFKD')
-      .replace(/[^\p{L}\p{N}\s]/gu, '') // Keep letters, numbers, and spaces
-      .replace(/\s+/g, ' ') // Collapse multiple spaces
-      .trim(); // Keep spaces between words
+      .normalize("NFKD")
+      .replace(/[^\p{L}\p{N}\s]/gu, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
   };
 
-  // Handle normal searches (text-based)
   const handleSearch = async (customQuery) => {
     const q = cleanTranscript(customQuery ?? query);
     if (!q.trim()) {
       setResults([]);
-      return;
-    }
-
-    // Redirect to payment page after 8 searches
-    if (searchCount >= 8) {
-      router.push('/payment');
       return;
     }
 
@@ -66,6 +56,7 @@ export default function EducationSearchPage() {
       // Update search count
       const updated = searchCount + 1;
       setSearchCount(updated);
+
     } catch (err) {
       setError('Search failed. Please try again.');
       console.error('Search error:', err);
@@ -73,7 +64,7 @@ export default function EducationSearchPage() {
     setLoading(false);
   };
 
-  // Debounce search typing
+  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query.trim()) handleSearch();
@@ -82,7 +73,6 @@ export default function EducationSearchPage() {
     return () => clearTimeout(timer);
   }, [query, aiMode]);
 
-  // Toggle between AI and normal mode
   const toggleAiMode = () => {
     setIsFading(true);
     setTimeout(() => {
@@ -91,14 +81,10 @@ export default function EducationSearchPage() {
     }, 300);
   };
 
-  // Handle voice input and transcription
+  // -------------------
+  // Voice Recording
+  // -------------------
   const handleMicClick = async () => {
-    // Redirect to payment page after 3 voice searches
-    if (voiceCount >= 3) {
-      router.push('/payment');
-      return;
-    }
-
     if (recording) {
       mediaRecorderRef.current.stop();
       setRecording(false);
@@ -128,10 +114,10 @@ export default function EducationSearchPage() {
             transcript = cleanTranscript(transcript);
             setQuery(transcript);
             handleSearch(transcript);
-
             // Update voice count
             const updated = voiceCount + 1;
             setVoiceCount(updated);
+
           } catch (err) {
             console.error('Transcription error:', err);
             setError('Voice transcription failed. Try again.');
@@ -183,8 +169,10 @@ export default function EducationSearchPage() {
         </div>
 
         {/* Search bar with mic and AI toggle */}
+
         <div className="flex justify-center mb-8 relative">
           <div className="relative w-full max-w-2xl flex items-center gap-3">
+            {/* Search Input */}
             <input
               type="text"
               placeholder={aiMode ? '🔍 Search the knowledge galaxy (e.g., AI, Quantum)' : '🔍 Search for tutorials (e.g., Python, React)'}
@@ -194,6 +182,7 @@ export default function EducationSearchPage() {
                 } focus:ring-2 focus:outline-none transition-all duration-300 focus:ring-blue-500`}
             />
 
+            {/* Mic Button */}
             <button
               onClick={handleMicClick}
               className={`relative p-4 rounded-full shadow-md transition-all duration-300 ${recording
@@ -206,7 +195,7 @@ export default function EducationSearchPage() {
               <svg
                 className="w-6 h-6"
                 fill="none"
-                stroke={recording ? 'red' : 'currentColor'}
+                stroke={recording ? "red" : "currentColor"}   // 🔹 Icon turns red when recording
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
               >
@@ -224,6 +213,7 @@ export default function EducationSearchPage() {
               )}
             </button>
 
+            {/* AI Mode Toggle */}
             <button
               onClick={toggleAiMode}
               className={`px-4 py-2 text-white rounded-full text-lg transition-all duration-200 hover:scale-105 ${aiMode
@@ -236,6 +226,8 @@ export default function EducationSearchPage() {
           </div>
         </div>
 
+
+        {/* Results & Recommendations */}
         {!aiMode && !loading && results.length === 0 && (
           <div className="max-w-4xl mx-auto mb-10">
             <h2 className="text-xl font-semibold mb-4 text-gray-900">Recommended Learning Resources</h2>
@@ -257,6 +249,7 @@ export default function EducationSearchPage() {
         {error && <p className={`text-center ${aiMode ? 'text-red-400' : 'text-red-600'} mb-6`}>{error}</p>}
 
         {/* Display search results */}
+
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
           {loading ? (
             <div className="col-span-full text-center">
@@ -293,6 +286,7 @@ export default function EducationSearchPage() {
         </div>
 
         {/* Filter section */}
+
         <div className="max-w-lg mx-auto mt-8 flex items-center gap-4">
           <label htmlFor="platform-filter" className={`font-semibold ${aiMode ? 'text-white' : 'text-gray-900'}`}>Filter Platform:</label>
           <select
