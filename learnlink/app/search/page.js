@@ -12,13 +12,18 @@ export default function EducationSearchPage() {
   const [aiMode, setAiMode] = useState(false);
   const [isFading, setIsFading] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [searchCount, setSearchCount] = useState(0);
+  const [voiceCount, setVoiceCount] = useState(0);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const threeSceneRef = useRef(null);
 
-  // -------------------
-  // Clean text utility
-  // -------------------
+  // Load counters from localStorage when the page opens
+  useEffect(() => {
+    setSearchCount(0);
+    setVoiceCount(0);
+  }, []);
+
   const cleanTranscript = (text) => {
     return text
       .normalize("NFKD")
@@ -29,7 +34,7 @@ export default function EducationSearchPage() {
   };
 
   const handleSearch = async (customQuery) => {
-    const q = customQuery ?? query;
+    const q = cleanTranscript(customQuery ?? query);
     if (!q.trim()) {
       setResults([]);
       return;
@@ -47,6 +52,11 @@ export default function EducationSearchPage() {
         platforms: ['web', 'youtube'],
       });
       setResults(response.data.results || []);
+
+      // Update search count
+      const updated = searchCount + 1;
+      setSearchCount(updated);
+
     } catch (err) {
       setError('Search failed. Please try again.');
       console.error('Search error:', err);
@@ -104,6 +114,10 @@ export default function EducationSearchPage() {
             transcript = cleanTranscript(transcript);
             setQuery(transcript);
             handleSearch(transcript);
+            // Update voice count
+            const updated = voiceCount + 1;
+            setVoiceCount(updated);
+
           } catch (err) {
             console.error('Transcription error:', err);
             setError('Voice transcription failed. Try again.');
@@ -154,7 +168,8 @@ export default function EducationSearchPage() {
           </p>
         </div>
 
-        {/* 🔹 Search Input + Mic + AI Button (Blue Themed) */}
+        {/* Search bar with mic and AI toggle */}
+
         <div className="flex justify-center mb-8 relative">
           <div className="relative w-full max-w-2xl flex items-center gap-3">
             {/* Search Input */}
@@ -162,7 +177,7 @@ export default function EducationSearchPage() {
               type="text"
               placeholder={aiMode ? '🔍 Search the knowledge galaxy (e.g., AI, Quantum)' : '🔍 Search for tutorials (e.g., Python, React)'}
               value={query}
-              onChange={(e) => setQuery(cleanTranscript(e.target.value))}
+              onChange={(e) => setQuery(e.target.value)}
               className={`flex-1 px-6 py-4 rounded-full border shadow-lg text-lg ${aiMode ? 'border-blue-500 bg-gray-800/80 text-white backdrop-blur-sm' : 'border-blue-500 bg-white text-gray-900'
                 } focus:ring-2 focus:outline-none transition-all duration-300 focus:ring-blue-500`}
             />
@@ -211,6 +226,7 @@ export default function EducationSearchPage() {
           </div>
         </div>
 
+
         {/* Results & Recommendations */}
         {!aiMode && !loading && results.length === 0 && (
           <div className="max-w-4xl mx-auto mb-10">
@@ -232,7 +248,8 @@ export default function EducationSearchPage() {
 
         {error && <p className={`text-center ${aiMode ? 'text-red-400' : 'text-red-600'} mb-6`}>{error}</p>}
 
-        {/* Search Results */}
+        {/* Display search results */}
+
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
           {loading ? (
             <div className="col-span-full text-center">
@@ -268,7 +285,8 @@ export default function EducationSearchPage() {
           )}
         </div>
 
-        {/* Platform Filter */}
+        {/* Filter section */}
+
         <div className="max-w-lg mx-auto mt-8 flex items-center gap-4">
           <label htmlFor="platform-filter" className={`font-semibold ${aiMode ? 'text-white' : 'text-gray-900'}`}>Filter Platform:</label>
           <select
