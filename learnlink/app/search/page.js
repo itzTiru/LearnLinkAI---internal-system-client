@@ -494,7 +494,6 @@ export default function PersonalizedHomePage() {
                     {searchResults
                       .filter(result => result.platform === 'youtube')
                       .map((result, idx) => {
-                        // Extract YouTube video ID from URL
                         const getYouTubeId = (url) => {
                           const match = url?.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
                           return match ? match[1] : null;
@@ -502,61 +501,45 @@ export default function PersonalizedHomePage() {
                         const videoId = getYouTubeId(result.url);
                         const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
 
+                        const queryParams = new URLSearchParams({
+                          page: 'youtube',
+                          title: result.title || '',
+                          description: result.description || '',
+                          url: result.url || '',
+                          platform: 'youtube',
+                          aiMode: aiMode ? 'true' : 'false'
+                        }).toString();
+
+                        const handleCardClick = () => {
+                          router.push(`/search-results?${queryParams}`);
+                        };
+
                         return (
                           <div
                             key={idx}
+                            onClick={handleCardClick}
                             className={`rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden cursor-pointer group ${
-                              aiMode
-                                ? 'bg-gray-800/80 hover:bg-gray-700/80 backdrop-blur-sm border border-red-400/30'
-                                : 'bg-white border border-gray-100 hover:border-red-300'
+                              aiMode ? 'bg-gray-800/80 hover:bg-gray-700/80 backdrop-blur-sm border border-red-400/30' : 'bg-white border border-gray-100 hover:border-red-300'
                             }`}
                             style={{ animationDelay: `${idx * 0.1}s` }}
                           >
                             {thumbnailUrl && (
                               <div className="relative w-full h-48 overflow-hidden bg-gray-900">
-                                <img 
-                                  src={thumbnailUrl} 
-                                  alt={result.title}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                  }}
-                                />
+                                <img src={thumbnailUrl} alt={result.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={(e) => { e.target.style.display = 'none'; }} />
                                 <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                                   <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
-                                    <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                                      <path d="M8 5v14l11-7z"/>
-                                    </svg>
+                                    <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                   </div>
                                 </div>
                               </div>
                             )}
                             <div className="p-5">
                               <div className="flex items-start justify-between mb-2">
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                  aiMode ? 'bg-red-900/50 text-red-300' : 'bg-red-100 text-red-700'
-                                }`}>
-                                  ▶ YouTube
-                                </span>
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${aiMode ? 'bg-red-900/50 text-red-300' : 'bg-red-100 text-red-700'}`}>▶ YouTube</span>
                               </div>
-                              <h3 className={`text-lg font-semibold mb-2 transition ${
-                                aiMode ? 'text-white group-hover:text-red-300' : 'text-gray-900 group-hover:text-red-600'
-                              } line-clamp-2`}>
-                                {result.title}
-                              </h3>
-                              <p className={`text-sm mb-4 line-clamp-2 ${aiMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                {result.description}
-                              </p>
-                              <a
-                                href={result.url || '#'}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`text-sm font-medium hover:underline inline-flex items-center gap-1 ${
-                                  aiMode ? 'text-red-400' : 'text-red-600'
-                                }`}
-                              >
-                                Watch Video →
-                              </a>
+                              <h3 className={`text-lg font-semibold mb-2 transition ${aiMode ? 'text-white group-hover:text-red-300' : 'text-gray-900 group-hover:text-red-600'} line-clamp-2`}>{result.title}</h3>
+                              <p className={`text-sm mb-4 line-clamp-2 ${aiMode ? 'text-gray-300' : 'text-gray-600'}`}>{result.description}</p>
+                              <a href={result.url || '#'} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={`text-sm font-medium hover:underline inline-flex items-center gap-1 ${aiMode ? 'text-red-400' : 'text-red-600'}`}>Watch Video →</a>
                             </div>
                           </div>
                         );
@@ -566,51 +549,46 @@ export default function PersonalizedHomePage() {
               )}
 
               {/* Web Results */}
-              {searchResults.filter(r => r.platform === 'web').length > 0 && (
+             {searchResults.filter(r => r.platform === 'web').length > 0 && (
                 <div>
                   <h3 className={`text-xl font-semibold mb-4 flex items-center gap-2 ${aiMode ? 'text-white' : 'text-gray-900'}`}>
-                    <span className="text-blue-500">🌐</span> Web Resources
+                    <span className="text-blue-500">Web Resources</span>
                   </h3>
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {searchResults
                       .filter(result => result.platform === 'web')
-                      .map((result, idx) => (
-                        <div
-                          key={idx}
-                          className={`rounded-xl shadow-md hover:shadow-xl transition-all p-6 cursor-pointer group ${
-                            aiMode
-                              ? 'bg-gray-800/80 hover:bg-gray-700/80 backdrop-blur-sm border border-blue-400/30'
-                              : 'bg-white border border-gray-100 hover:border-blue-300'
-                          }`}
-                          style={{ animationDelay: `${idx * 0.1}s` }}
-                        >
-                          <div className="flex items-start justify-between mb-3">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              aiMode ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'
-                            }`}>
-                              🌐 Web
-                            </span>
-                          </div>
-                          <h3 className={`text-lg font-semibold mb-2 transition ${
-                            aiMode ? 'text-white group-hover:text-blue-300' : 'text-gray-900 group-hover:text-blue-600'
-                          } line-clamp-2`}>
-                            {result.title}
-                          </h3>
-                          <p className={`text-sm mb-4 line-clamp-3 ${aiMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            {result.description}
-                          </p>
-                          <a
-                            href={result.url || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`text-sm font-medium hover:underline inline-flex items-center gap-1 ${
-                              aiMode ? 'text-blue-400' : 'text-blue-600'
+                      .map((result, idx) => {
+                        const queryParams = new URLSearchParams({
+                          page: 'web',
+                          title: result.title || '',
+                          description: result.description || '',
+                          url: result.url || '',
+                          platform: 'web',
+                          aiMode: aiMode ? 'true' : 'false'
+                        }).toString();
+
+                        const handleCardClick = () => {
+                          router.push(`/search-results?${queryParams}`);
+                        };
+
+                        return (
+                          <div
+                            key={idx}
+                            onClick={handleCardClick}
+                            className={`rounded-xl shadow-md hover:shadow-xl transition-all p-6 cursor-pointer group ${
+                              aiMode ? 'bg-gray-800/80 hover:bg-gray-700/80 backdrop-blur-sm border border-blue-400/30' : 'bg-white border border-gray-100 hover:border-blue-300'
                             }`}
+                            style={{ animationDelay: `${idx * 0.1}s` }}
                           >
-                            Read More →
-                          </a>
-                        </div>
-                      ))}
+                            <div className="flex items-start justify-between mb-3">
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${aiMode ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>Web</span>
+                            </div>
+                            <h3 className={`text-lg font-semibold mb-2 transition ${aiMode ? 'text-white group-hover:text-blue-300' : 'text-gray-900 group-hover:text-blue-600'} line-clamp-2`}>{result.title}</h3>
+                            <p className={`text-sm mb-4 line-clamp-3 ${aiMode ? 'text-gray-300' : 'text-gray-600'}`}>{result.description}</p>
+                            <a href={result.url || '#'} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={`text-sm font-medium hover:underline inline-flex items-center gap-1 ${aiMode ? 'text-blue-400' : 'text-blue-600'}`}>Read More →</a>
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               )}
@@ -622,53 +600,49 @@ export default function PersonalizedHomePage() {
             <>
               <div className="mb-12">
                 <h2 className={`text-2xl font-bold mb-2 ${aiMode ? 'text-white' : 'text-gray-900'}`}>
-                  {aiMode ? '🌟 AI-Curated Recommendations' : 'Recommended for You'}
+                  {aiMode ? 'AI-Curated Recommendations' : 'Recommended for You'}
                 </h2>
-                <p className={`mb-6 ${aiMode ? 'text-blue-200' : 'text-gray-600'}`}>
-                  Based on your education level and interests
-                </p>
+                <p className={`mb-6 ${aiMode ? 'text-blue-200' : 'text-gray-600'}`}>Based on your education level and interests</p>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {recommendations.length > 0 ? (
-                    recommendations.map((rec, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          setQuery(rec.title);
-                          handleSearch(rec.title);
-                        }}
-                        className={`rounded-xl shadow-md hover:shadow-xl transition-all p-6 cursor-pointer group ${
-                          aiMode
-                            ? 'bg-purple-900/40 hover:bg-purple-800/60 backdrop-blur-sm border border-purple-400/30'
-                            : 'bg-white border border-gray-100 hover:border-purple-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl ${
-                            aiMode ? 'bg-gradient-to-br from-purple-600 to-pink-600' : 'bg-gradient-to-br from-purple-500 to-pink-500'
-                          }`}>
-                            📚
+                    recommendations.map((rec, idx) => {
+                      const queryParams = new URLSearchParams({
+                        page: 'recommendation',
+                        title: rec.title || '',
+                        description: rec.description || '',
+                        category: rec.category || '',
+                        relevance_score: rec.relevance_score || '',
+                        platform: rec.platform || '',
+                        url: rec.url || '', // Added missing url param
+                        aiMode: aiMode ? 'true' : 'false'
+                      }).toString();
+
+                      const handleCardClick = () => {
+                        router.push(`/search-results?${queryParams}`);
+                      };
+
+                      return (
+                        <div
+                          key={idx}
+                          onClick={handleCardClick}
+                          className={`rounded-xl shadow-md hover:shadow-xl transition-all p-6 cursor-pointer group ${
+                            aiMode ? 'bg-purple-900/40 hover:bg-purple-800/60 backdrop-blur-sm border border-purple-400/30' : 'bg-white border border-gray-100 hover:border-purple-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl ${aiMode ? 'bg-gradient-to-br from-lavender-600 to-lightgray-600' : 'bg-gradient-to-br from-lavender-500 to-lightgray-500'}`}>📚</div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${aiMode ? 'bg-purple-900/50 text-purple-200' : 'bg-purple-100 text-purple-700'}`}>{rec.category || 'Recommended'}</span>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            aiMode ? 'bg-purple-900/50 text-purple-200' : 'bg-purple-100 text-purple-700'
-                          }`}>
-                            {rec.category || 'Recommended'}
-                          </span>
+                          <h3 className={`text-lg font-semibold mb-2 transition ${aiMode ? 'text-white group-hover:text-purple-300' : 'text-gray-900 group-hover:text-purple-600'}`}>{rec.title}</h3>
+                          <p className={`text-sm mb-3 line-clamp-2 ${aiMode ? 'text-gray-300' : 'text-gray-600'}`}>{rec.description}</p>
+                          <div className={`flex items-center gap-2 text-xs ${aiMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <span>⭐ {rec.relevance_score || '95'}% match</span>
+                            <span>•</span>
+                            <span>{rec.platform || 'Multiple platforms'}</span>
+                          </div>
                         </div>
-                        <h3 className={`text-lg font-semibold mb-2 transition ${
-                          aiMode ? 'text-white group-hover:text-purple-300' : 'text-gray-900 group-hover:text-purple-600'
-                        }`}>
-                          {rec.title}
-                        </h3>
-                        <p className={`text-sm mb-3 line-clamp-2 ${aiMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                          {rec.description}
-                        </p>
-                        <div className={`flex items-center gap-2 text-xs ${aiMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          <span>⭐ {rec.relevance_score || '95'}% match</span>
-                          <span>•</span>
-                          <span>{rec.platform || 'Multiple platforms'}</span>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="col-span-full text-center py-12">
                       <div className="text-6xl mb-4">🎓</div>

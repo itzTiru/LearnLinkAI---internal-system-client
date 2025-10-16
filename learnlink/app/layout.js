@@ -107,13 +107,13 @@ function Navbar() {
     }
   };
 
+ 
   const getPageTitle = () => {
-    if (pathname === '/search' || pathname === '/') return 'Explore';
+    if (pathname === '/search' || pathname === '/' || pathname === '/home') return 'Explore';
     if (pathname === '/personal') return 'My Profile';
-    if (pathname.startsWith('/course')) return 'Course Details';
+    if (pathname === '/search-results') return 'Search Results';
     return 'EduRecommend';
   };
-
   const getPageSubtitle = () => {
     if (pathname === '/search' || pathname === '/') {
       return 'What do you want to learn?';
