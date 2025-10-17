@@ -13,6 +13,8 @@ export default function SearchResultsPage() {
   const [particles, setParticles] = useState([]);
   const [relatedTopics, setRelatedTopics] = useState([]);
   const [isFading, setIsFading] = useState(false);
+  const [sessionManagement, setSessionManagement] = useState(null);
+  const [relatedTopicsLoading, setRelatedTopicsLoading] = useState(true);
 
   const title = searchParams.get('title') || '';
   const description = searchParams.get('description') || '';
@@ -20,6 +22,13 @@ export default function SearchResultsPage() {
   const platform = searchParams.get('platform') || '';
   const category = searchParams.get('category') || '';
   const relevanceScore = searchParams.get('relevance_score') || '';
+
+  // Dynamically import session-management
+  useEffect(() => {
+    import("../../lib/session-management").then((mod) => {
+      setSessionManagement(mod.default || mod);
+    });
+  }, []);
 
   useEffect(() => {
     const generatedParticles = [...Array(20)].map(() => ({
@@ -36,10 +45,11 @@ export default function SearchResultsPage() {
 
   useEffect(() => {
     fetchEnhancedDescription();
-    generateRelatedTopics();
-  }, []);
+    fetchRelatedTopics();
+  }, [title]);  // Depend on title to refetch when it changes
 
   const fetchEnhancedDescription = async () => {
+    setLoading(true);
     if (!description) {
       setLoading(false);
       return;
@@ -68,16 +78,42 @@ export default function SearchResultsPage() {
     setLoading(false);
   };
 
-  const generateRelatedTopics = () => {
-    const topics = [
-      'Advanced Concepts',
-      'Beginner Guide',
-      'Practical Examples',
-      'Deep Dive',
-      'Quick Tutorial',
-      'Expert Tips'
-    ];
-    setRelatedTopics(topics.sort(() => Math.random() - 0.5).slice(0, 4));
+  const fetchRelatedTopics = async () => {
+    setRelatedTopicsLoading(true);
+    if (!title) {
+      setRelatedTopicsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8000/related-topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_query: title
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setRelatedTopics(data.topics);
+      } else {
+        throw new Error('Failed to fetch topics');
+      }
+    } catch (error) {
+      console.error('Failed to fetch related topics:', error);
+      // Fallback to static
+      const topics = [
+        'Advanced Concepts',
+        'Beginner Guide',
+        'Practical Examples',
+        'Deep Dive',
+        'Quick Tutorial',
+        'Expert Tips'
+      ];
+      setRelatedTopics(topics.sort(() => Math.random() - 0.5).slice(0, 4));
+    }
+    setRelatedTopicsLoading(false);
   };
 
   const toggleAiMode = () => {
@@ -86,6 +122,92 @@ export default function SearchResultsPage() {
       setAiMode(!aiMode);
       setIsFading(false);
     }, 300);
+  };
+
+  const handleBookmark = async () => {
+    if (!sessionManagement) {
+      alert("Session not loaded. Please refresh.");
+      return;
+    }
+    const token = sessionManagement.getToken();
+    if (!token || !sessionManagement.isAuthenticated()) {
+      router.replace("/login");
+      return;
+    }
+
+    const decodedUser = sessionManagement.getUser();
+    const email = decodedUser.email;
+    const encodedEmail = encodeURIComponent(email);
+
+    try {
+      const res = await fetch(`http://localhost:8000/personal/${encodedEmail}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          sessionManagement.clearToken();
+          router.replace("/login");
+          return;
+        }
+        throw new Error("Failed to fetch profile");
+      }
+      let currentUser = await res.json();
+      let bookmarks = currentUser.bookmarks || [];
+      if (!bookmarks.includes(url)) {
+        bookmarks.push(url);
+        const updatedUser = { ...currentUser, bookmarks };
+        const saveRes = await fetch("http://localhost:8000/personal/save", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(updatedUser),
+        });
+        if (saveRes.ok) {
+          alert("Bookmarked successfully!");
+        } else {
+          alert("Failed to bookmark.");
+        }
+      } else {
+        alert("Already bookmarked!");
+      }
+    } catch (err) {
+      console.error("Bookmark error:", err);
+      alert("Error bookmarking.");
+    }
+  };
+
+  const handleTopicClick = async (topic) => {
+    try {
+      const response = await fetch('http://localhost:8000/topic-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate topic description');
+      }
+
+      const data = await response.json();
+      const newParams = new URLSearchParams({
+        title: topic,
+        description: data.detailed_description,
+        url: '',
+        platform: 'ai',
+        category: 'Generated Topic',
+        relevance_score: '100',
+        aiMode: aiMode.toString()
+      });
+
+      router.push(`?${newParams.toString()}`);
+    } catch (error) {
+      console.error('Failed to handle topic click:', error);
+      alert('Error loading topic details. Please try again.');
+    }
   };
 
   const getYouTubeId = (url) => {
@@ -300,6 +422,7 @@ export default function SearchResultsPage() {
                   📚 Add to Learning Path
                 </button>
                 <button
+                  onClick={handleBookmark}
                   className={`px-6 py-3 rounded-lg font-medium transition-all ${
                     aiMode
                       ? 'bg-gray-700/80 border border-gray-600 text-white hover:bg-gray-600/80'
@@ -340,23 +463,33 @@ export default function SearchResultsPage() {
             <h2 className={`text-2xl font-bold mb-6 ${aiMode ? 'text-white' : 'text-gray-900'}`}>
               {aiMode ? '🌟 AI-Recommended Topics' : 'Related Topics'}
             </h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {relatedTopics.map((topic, idx) => (
-                <button
-                  key={idx}
-                  className={`p-4 rounded-xl text-left transition-all ${
-                    aiMode
-                      ? 'bg-gray-700/50 border border-purple-400/30 hover:bg-gray-600/50 text-white'
-                      : 'bg-gray-50 border border-gray-200 hover:border-blue-400 hover:bg-blue-50 text-gray-900'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🎯</span>
-                    <span className="font-medium">{topic}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+            {relatedTopicsLoading ? (
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className={aiMode ? 'text-gray-300' : 'text-gray-600'}>
+                  Loading related topics...
+                </span>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                {relatedTopics.map((topic, idx) => (
+                  <button
+                    key={idx}
+                    onClick={async () => await handleTopicClick(topic)}
+                    className={`p-4 rounded-xl text-left transition-all ${
+                      aiMode
+                        ? 'bg-gray-700/50 border border-purple-400/30 hover:bg-gray-600/50 text-white'
+                        : 'bg-gray-50 border border-gray-200 hover:border-blue-400 hover:bg-blue-50 text-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🎯</span>
+                      <span className="font-medium">{topic}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
