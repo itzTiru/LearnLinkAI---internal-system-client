@@ -213,7 +213,7 @@ export default function PdfAnalyzerPage() {
               {result.keywords?.length > 0 && (
                 <div>
                   <h2 className="font-semibold text-lg text-blue-500 mb-2">
-                    Keywords
+                    Main topics covered
                   </h2>
                   <div className="flex flex-wrap gap-2">
                     {result.keywords.map((k, idx) => (

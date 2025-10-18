@@ -314,6 +314,32 @@ export default function ProfilePage() {
               </button>
             </div>
           </div>
+
+          {/* Bookmarks Section */}
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Bookmarks</h2>
+            <div className="p-5 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition">
+              <h3 className="font-semibold text-gray-700 mb-2">Saved Links</h3>
+              {user.bookmarks && user.bookmarks.length > 0 ? (
+                <div className="space-y-3">
+                  {user.bookmarks.map((bookmark, index) => (
+                    <div key={index} className="bg-gray-50 p-3 rounded-md">
+                      <a 
+                        href={bookmark} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-blue-600 hover:underline text-sm break-all"
+                      >
+                        {bookmark}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No bookmarks yet. Discover and save resources from your searches.</p>
+              )}
+            </div>
+          </div>
         </main>
       </div>
 

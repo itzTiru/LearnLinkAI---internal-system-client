@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { FaCog } from "react-icons/fa";
+import { FaCog, FaGithub, FaTwitter, FaLinkedin, FaEnvelope, FaHeart, FaBook, FaRocket, FaUsers } from "react-icons/fa";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -107,13 +107,13 @@ function Navbar() {
     }
   };
 
- 
   const getPageTitle = () => {
     if (pathname === '/search' || pathname === '/' || pathname === '/home') return 'Explore';
     if (pathname === '/personal') return 'My Profile';
     if (pathname === '/search-results') return 'Search Results';
     return 'EduRecommend';
   };
+
   const getPageSubtitle = () => {
     if (pathname === '/search' || pathname === '/') {
       return 'What do you want to learn?';
@@ -130,7 +130,6 @@ function Navbar() {
     <header className="bg-white shadow-sm p-4 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="flex items-center space-x-4">
-          
           <div>
             <h1 className="text-lg font-semibold text-gray-900">
               {getPageTitle()}
@@ -241,14 +240,205 @@ function Navbar() {
   );
 }
 
+function Footer() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Pages where footer should not appear
+  const hideFooterPages = ['/login', '/register'];
+  const shouldShowFooter = !hideFooterPages.includes(pathname);
+
+  if (!shouldShowFooter) return null;
+
+  return (
+    <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white mt-auto">
+      {/* Main Footer Content */}
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Brand Section */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <FaBook className="text-white text-xl" />
+              </div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                EduRecommend
+              </h3>
+            </div>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Your personalized learning companion powered by AI. Discover courses, build roadmaps, and achieve your educational goals.
+            </p>
+            <div className="flex space-x-3">
+              <a
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 bg-gray-700 hover:bg-blue-600 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+              >
+                <FaGithub className="text-lg" />
+              </a>
+              <a
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 bg-gray-700 hover:bg-blue-400 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+              >
+                <FaTwitter className="text-lg" />
+              </a>
+              <a
+                href="https://linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 bg-gray-700 hover:bg-blue-700 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+              >
+                <FaLinkedin className="text-lg" />
+              </a>
+              <a
+                href="mailto:contact@edurecommend.com"
+                className="w-9 h-9 bg-gray-700 hover:bg-purple-600 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+              >
+                <FaEnvelope className="text-lg" />
+              </a>
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h4 className="text-lg font-semibold mb-4 text-white">Quick Links</h4>
+            <ul className="space-y-2">
+              <li>
+                <button
+                  onClick={() => router.push('/search')}
+                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm flex items-center space-x-2 group"
+                >
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  <span>Home</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => router.push('/personal')}
+                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm flex items-center space-x-2 group"
+                >
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  <span>My Profile</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => router.push('/upload-pdf')}
+                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm flex items-center space-x-2 group"
+                >
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  <span>Document Summarization</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => router.push('/roadmap-generation')}
+                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm flex items-center space-x-2 group"
+                >
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  <span>Roadmap Generation</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => router.push('/settings')}
+                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm flex items-center space-x-2 group"
+                >
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  <span>Settings</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          
+
+          {/* Legal */}
+          <div>
+            <h4 className="text-lg font-semibold mb-4 text-white">Legal</h4>
+            <ul className="space-y-2">
+              <li>
+                <a
+                  href="/privacy"
+                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
+                >
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/terms"
+                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
+                >
+                  Terms of Service
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/cookies"
+                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
+                >
+                  Cookie Policy
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/accessibility"
+                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
+                >
+                  Accessibility
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/contact"
+                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
+                >
+                  Contact Us
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Newsletter Section */}
+        
+        
+      </div>
+
+      {/* Bottom Bar */}
+      <div className="border-t border-gray-700">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <div className="flex items-center space-x-2 text-gray-400 text-sm">
+              <span>© 2025 EduRecommend. All rights reserved.</span>
+            </div>
+            <div className="flex items-center space-x-2 text-gray-400 text-sm">
+              <span>Made with</span>
+              <FaHeart className="text-red-500 animate-pulse" />
+              <span>for learners worldwide</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
         <Navbar />
-        {children}
+        <main className="flex-grow">
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   );
