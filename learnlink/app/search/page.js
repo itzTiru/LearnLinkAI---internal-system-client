@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from "next/navigation";
 import { ChevronDown, Clock, BookOpen, ExternalLink, Award, TrendingUp, Send, Bot, User, FileText, Map } from 'lucide-react';
+import axios from 'axios';
+import ThreeScene from '../../components/ThreeScene';
+import { useSearchParams } from "next/navigation";
 
 export default function PersonalizedHomePage() {
   const [query, setQuery] = useState('');
@@ -21,6 +24,7 @@ export default function PersonalizedHomePage() {
   const [sessionManagement, setSessionManagement] = useState(null);
   const [particles, setParticles] = useState([]);
   const [isClient, setIsClient] = useState(false);
+  const [pendingQuery, setPendingQuery] = useState(null);
 
   // AI Mode specific states
   const [sessionId, setSessionId] = useState(null);
@@ -37,6 +41,34 @@ export default function PersonalizedHomePage() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  const searchParams = useSearchParams();
+  
+  // Store query parameter when page loads
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q) {
+      setQuery(q);
+      setPendingQuery(q);
+    }
+  }, [searchParams]);
+
+  // Execute search when sessionManagement is ready and there's a pending query
+  useEffect(() => {
+    if (sessionManagement && pendingQuery) {
+      handleSearch(pendingQuery);
+      setPendingQuery(null);
+      
+      // Add blue glow to input
+      const input = document.getElementById("searchInput");
+      if (input) {
+        input.classList.add("ring-2", "ring-blue-400", "shadow-blue-200");
+        setTimeout(() => {
+          input.classList.remove("ring-2", "ring-blue-400", "shadow-blue-200");
+        }, 1500);
+      }
+    }
+  }, [sessionManagement, pendingQuery]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -104,7 +136,7 @@ export default function PersonalizedHomePage() {
 
     const email = decodedUser.email;
     const encodedEmail = encodeURIComponent(email);
-    console.log('Decoded email:', email);  // For debugging
+    console.log('Decoded email:', email);
 
     setLoading(true);
     setError(null);
@@ -114,7 +146,6 @@ export default function PersonalizedHomePage() {
         'Content-Type': 'application/json'
       };
 
-      // Fetch profile using /personal/{email} to match ProfilePage
       const profileRes = await fetch(`http://localhost:8000/personal/${encodedEmail}`, {
         headers
       });
@@ -127,7 +158,7 @@ export default function PersonalizedHomePage() {
         throw new Error(`Profile fetch failed: ${profileRes.status}`);
       }
       const profileData = await profileRes.json();
-      setUserProfile(profileData.profile || profileData);  // Adjust if wrapped
+      setUserProfile(profileData.profile || profileData);
 
       const recMode = aiMode ? 'ai' : 'traditional';
       const recRes = await fetch(`${API_BASE}/recommendations?mode=${recMode}`, {
@@ -143,12 +174,6 @@ export default function PersonalizedHomePage() {
       }
       const recData = await recRes.json();
       setRecommendations(recData.recommendations || []);
-
-      // Fetch recent searches (commented as in original)
-      // const searchRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/recent-searches`, {
-      //   headers
-      // });
-      // ...
 
     } catch (err) {
       console.error('Error fetching user data:', err);
@@ -182,7 +207,6 @@ export default function PersonalizedHomePage() {
     }
 
     if (aiMode && !results) {
-      // In AI mode, trigger roadmap generation instead of regular search
       handleQuerySubmit(q);
       return;
     }
@@ -231,7 +255,6 @@ export default function PersonalizedHomePage() {
       const newMode = !aiMode;
       setAiMode(newMode);
       
-      // Reset AI-specific states when toggling
       setSessionId(null);
       setMcqs([]);
       setAnswers({});
@@ -242,7 +265,6 @@ export default function PersonalizedHomePage() {
       setExpandedSteps(new Set());
       setShowSearch(false);
       
-      // Refetch recommendations with new mode
       if (userProfile && sessionManagement) {
         const recMode = newMode ? 'ai' : 'traditional';
         try {
@@ -318,13 +340,30 @@ export default function PersonalizedHomePage() {
     }
   };
 
-  // AI Mode: Roadmap Generation Functions
   const handleQuerySubmit = async (q) => {
     const currentQuery = q || query;
     if (!currentQuery.trim() || currentQuery.length < 3) {
       setError('Query must be at least 3 characters long.');
       return;
     }
+
+    const now = Date.now();
+    let count = parseInt(localStorage.getItem('aiGenerationsCount') || '0');
+    const lastTimeStr = localStorage.getItem('lastGenerationTime');
+    if (lastTimeStr) {
+      const lastTime = parseInt(lastTimeStr);
+      if (now - lastTime > 5 * 60 * 60 * 1000) {
+        count = 0;
+        localStorage.setItem('aiGenerationsCount', '0');
+        localStorage.removeItem('lastGenerationTime');
+      }
+    }
+    if (count >= 3) {
+      router.push('/payment');
+      setError('Please upgrade to continue using AI features.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -361,7 +400,12 @@ export default function PersonalizedHomePage() {
       setDomain(data.domain || 'Unknown');
       setIntent(data.intent || 'Unknown');
       setStyle(data.style || 'Unknown');
-      setShowSearch(true); // Show the AI content in the search section
+      setShowSearch(true);
+
+      const newNow = Date.now();
+      count++;
+      localStorage.setItem('aiGenerationsCount', count.toString());
+      localStorage.setItem('lastGenerationTime', newNow.toString());
 
     } catch (err) {
       if (err.name === 'AbortError') {
@@ -474,7 +518,6 @@ export default function PersonalizedHomePage() {
     return colors[difficulty] || colors.intermediate;
   };
 
-  // Chat bot functions
   const handleChatSend = async () => {
     if (!chatInput.trim() || !sessionManagement) return;
 
@@ -538,6 +581,7 @@ export default function PersonalizedHomePage() {
           <div className="mb-12">
             <div className="relative max-w-3xl mx-auto">
               <input
+                id="searchInput"
                 type="text"
                 placeholder={aiMode ? 'What do you want to learn? (AI Mode)' : 'What would you like to learn today?'}
                 value={query}
@@ -616,7 +660,6 @@ export default function PersonalizedHomePage() {
               {error}
             </div>
           )}
-
           {/* AI Mode Content */}
           {aiMode && showSearch && (
             <div className="mb-12 max-w-4xl mx-auto">

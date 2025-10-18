@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 
@@ -14,6 +14,29 @@ export default function PdfAnalyzerPage() {
   const [answer, setAnswer] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [sessionManagement, setSessionManagement] = useState(null);
+  const router = useRouter();
+
+  // Dynamically import session-management
+  useEffect(() => {
+    import("../../lib/session-management").then((mod) => {
+      setSessionManagement(mod.default || mod);
+    });
+  }, []);
+
+  // Auto-redirect if not authenticated
+  useEffect(() => {
+    const checkAuth = () => {
+      if (sessionManagement && !sessionManagement.isAuthenticated()) {
+        sessionManagement.clearToken();
+        router.replace("/login");
+      }
+    };
+    if (sessionManagement) {
+      const timer = setTimeout(checkAuth, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [sessionManagement, router]);
 
   // Select file
   const handleSelectFile = () => fileInputRef.current?.click();
@@ -22,6 +45,12 @@ export default function PdfAnalyzerPage() {
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
+    if (!sessionManagement || !sessionManagement.isAuthenticated()) {
+      alert('Please log in to upload files.');
+      router.replace("/login");
+      return;
+    }
 
     setFileName(file.name);
     setFileURL(URL.createObjectURL(file)); // For PDF preview
@@ -32,12 +61,23 @@ export default function PdfAnalyzerPage() {
     formData.append("file", file);
 
     try {
+      const token = sessionManagement.getToken();
       const res = await fetch("http://localhost:8000/upload-pdf/", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Failed to process PDF");
+      if (!res.ok) {
+        if (res.status === 401) {
+          sessionManagement.clearToken();
+          router.replace("/login");
+          return;
+        }
+        throw new Error("Failed to process PDF");
+      }
       const data = await res.json();
 
       // Convert strings to arrays
@@ -122,41 +162,71 @@ export default function PdfAnalyzerPage() {
   // Ask question
   const handleAskQuestion = async () => {
     if (!question.trim() || !result?.summary) return;
+    
+    if (!sessionManagement || !sessionManagement.isAuthenticated()) {
+      alert('Please log in to ask questions.');
+      router.replace("/login");
+      return;
+    }
+
     setChatLoading(true);
     setAnswer("");
 
     try {
+      const token = sessionManagement.getToken();
       const res = await fetch("http://localhost:8000/ask-pdf/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ text: result.summary, question }),
       });
 
-      if (!res.ok) throw new Error("Failed to get answer");
+      if (!res.ok) {
+        if (res.status === 401) {
+          sessionManagement.clearToken();
+          router.replace("/login");
+          return;
+        }
+        throw new Error("Failed to get answer");
+      }
       const data = await res.json();
       setAnswer(data.answer);
     } catch (err) {
       console.error(err);
-      setAnswer(" Failed to get an answer. Please try again.");
+      setAnswer("Failed to get an answer. Please try again.");
     } finally {
       setChatLoading(false);
     }
   };
 
-  const router = useRouter();
-
   const handleSearchQueryClick = (query) => {
     if (!query) return;
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    
+    // Simply navigate to search page with query parameter
+    // The search page will handle authentication and auto-search via its useEffect
+    router.push(`/search?q=${encodeURIComponent(query.trim())}`);
   };
 
+  // Show loading while checking auth
+  if (!sessionManagement) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f9fbff] flex flex-col items-center py-8 px-4">
       <div className="max-w-7xl w-full bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
         {/* Header */}
         <div className="text-center py-6 border-b border-gray-100 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <h1 className="text-3xl font-bold"> AI PDF Reader & Analyzer</h1>
+          <h1 className="text-3xl font-bold">🤖 AI PDF Reader & Analyzer</h1>
           <p className="text-sm opacity-90">
             Upload a PDF to analyze difficulty, extract keywords, and get a smart summary
           </p>
@@ -176,9 +246,9 @@ export default function PdfAnalyzerPage() {
               onClick={handleSelectFile}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold shadow transition"
             >
-              {loading ? "Analyzing..." : "Upload PDF"}
+              {loading ? "Analyzing..." : "📄 Upload PDF"}
             </button>
-            {fileName && <p className="text-blue-600 font-medium"> {fileName}</p>}
+            {fileName && <p className="text-blue-600 font-medium">📎 {fileName}</p>}
           </div>
         )}
 
@@ -189,7 +259,7 @@ export default function PdfAnalyzerPage() {
             <div className="w-full lg:w-1/2 border-r border-gray-200 bg-gray-50">
               <div className="p-4">
                 <h2 className="font-semibold text-lg text-blue-600 mb-2">
-                   Uploaded PDF
+                  📄 Uploaded PDF
                 </h2>
                 <iframe
                   src={fileURL}
@@ -206,14 +276,14 @@ export default function PdfAnalyzerPage() {
                   result.difficulty
                 )}`}
               >
-                Difficulty: {result.difficulty}
+                📊 Difficulty: {result.difficulty}
               </div>
 
               {/* Keywords */}
               {result.keywords?.length > 0 && (
                 <div>
                   <h2 className="font-semibold text-lg text-blue-500 mb-2">
-                    Main topics covered
+                    🎯 Main topics covered
                   </h2>
                   <div className="flex flex-wrap gap-2">
                     {result.keywords.map((k, idx) => (
@@ -235,7 +305,7 @@ export default function PdfAnalyzerPage() {
               {result.search_queries?.length > 0 && (
                 <div>
                   <h2 className="font-semibold text-lg text-blue-500 mb-2">
-                    Suggested Search Queries
+                    💡 Suggested Search Queries
                   </h2>
                   <div className="flex flex-col gap-2">
                     {result.search_queries.map((query, i) => (
@@ -256,7 +326,7 @@ export default function PdfAnalyzerPage() {
               {result.summary && (
                 <div>
                   <h2 className="font-semibold text-lg text-blue-500 mb-2">
-                    Summary
+                    📝 Summary
                   </h2>
                   <p className="text-gray-800 leading-relaxed text-justify">
                     {highlightKeywords(result.summary, result.keywords)}
@@ -265,7 +335,7 @@ export default function PdfAnalyzerPage() {
                   {/* Word count, read time, voice */}
                   <div className="mt-4 flex gap-4 items-center">
                     <div className="bg-gray-100 px-3 py-1 rounded-full text-gray-800 font-medium">
-                       Words: {result.summary.trim().split(/\s+/).length}
+                      📄 Words: {result.summary.trim().split(/\s+/).length}
                     </div>
                     <div className="bg-gray-100 px-3 py-1 rounded-full text-gray-800 font-medium">
                       ⏱ {(result.summary.trim().split(/\s+/).length / 120).toFixed(1)}{" "}
@@ -288,7 +358,7 @@ export default function PdfAnalyzerPage() {
               {/* Q&A */}
               <div className="pt-6 border-t border-gray-200">
                 <h2 className="font-semibold text-lg text-blue-500 mb-3">
-                   Ask Questions About This PDF
+                  ❓ Ask Questions About This PDF
                 </h2>
                 <div className="flex gap-2">
                   <input
@@ -297,6 +367,7 @@ export default function PdfAnalyzerPage() {
                     className="flex-grow border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAskQuestion()}
                   />
                   <button
                     onClick={handleAskQuestion}
