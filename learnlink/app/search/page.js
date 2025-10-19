@@ -47,9 +47,13 @@ export default function PersonalizedHomePage() {
   // Store query parameter when page loads
   useEffect(() => {
     const q = searchParams.get("q");
+    const aiParam = searchParams.get("aiMode");
     if (q) {
       setQuery(q);
       setPendingQuery(q);
+      if (aiParam === 'true') {
+        setAiMode(true);
+      }
     }
   }, [searchParams]);
 

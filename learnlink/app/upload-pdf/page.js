@@ -15,6 +15,7 @@ export default function PdfAnalyzerPage() {
   const [chatLoading, setChatLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [sessionManagement, setSessionManagement] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const router = useRouter();
 
   // Dynamically import session-management
@@ -40,6 +41,26 @@ export default function PdfAnalyzerPage() {
 
   // Select file
   const handleSelectFile = () => fileInputRef.current?.click();
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === "application/pdf") {
+      const event = { target: { files: [file] } };
+      handleFileChange(event);
+    }
+  };
 
   // Upload file
   const handleFileChange = async (event) => {
@@ -226,7 +247,7 @@ export default function PdfAnalyzerPage() {
       <div className="max-w-7xl w-full bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
         {/* Header */}
         <div className="text-center py-6 border-b border-gray-100 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <h1 className="text-3xl font-bold">🤖 AI PDF Reader & Analyzer</h1>
+          <h1 className="text-3xl font-bold">AI PDF Reader & Analyzer</h1>
           <p className="text-sm opacity-90">
             Upload a PDF to analyze difficulty, extract keywords, and get a smart summary
           </p>
@@ -242,12 +263,32 @@ export default function PdfAnalyzerPage() {
               onChange={handleFileChange}
               className="hidden"
             />
-            <button
-              onClick={handleSelectFile}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold shadow transition"
+            <div
+              className={`w-96 h-48 border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-6 transition-all duration-200 ${
+                isDragging
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-300 hover:border-gray-400"
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
             >
-              {loading ? "Analyzing..." : "📄 Upload PDF"}
-            </button>
+              <div className="text-center">
+                <p className="text-lg font-semibold text-gray-700 mb-2">
+                  {isDragging ? "Drop your PDF here" : "Drop PDF here or click to select"}
+                </p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Supports .pdf files only
+                </p>
+                <button
+                  onClick={handleSelectFile}
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-semibold shadow transition"
+                >
+                  {loading ? "Analyzing..." : "Select File"}
+                </button>
+              </div>
+            </div>
             {fileName && <p className="text-blue-600 font-medium">📎 {fileName}</p>}
           </div>
         )}
@@ -283,7 +324,7 @@ export default function PdfAnalyzerPage() {
               {result.keywords?.length > 0 && (
                 <div>
                   <h2 className="font-semibold text-lg text-blue-500 mb-2">
-                    🎯 Main topics covered
+                     Main topics covered
                   </h2>
                   <div className="flex flex-wrap gap-2">
                     {result.keywords.map((k, idx) => (
@@ -294,7 +335,7 @@ export default function PdfAnalyzerPage() {
                           window.open(`https://www.google.com/search?q=${k}`, "_blank")
                         }
                       >
-                        🔍 {k}
+                         {k}
                       </span>
                     ))}
                   </div>
@@ -305,7 +346,7 @@ export default function PdfAnalyzerPage() {
               {result.search_queries?.length > 0 && (
                 <div>
                   <h2 className="font-semibold text-lg text-blue-500 mb-2">
-                    💡 Suggested Search Queries
+                     Suggested Search Queries
                   </h2>
                   <div className="flex flex-col gap-2">
                     {result.search_queries.map((query, i) => (
@@ -314,7 +355,7 @@ export default function PdfAnalyzerPage() {
                         onClick={() => handleSearchQueryClick(query)}
                         className="bg-blue-50 hover:bg-blue-100 text-blue-800 px-4 py-2 rounded-lg shadow-sm text-left transition-all duration-200 border border-blue-200 hover:scale-105"
                       >
-                        🔍 {query}
+                         {query}
                       </button>
                     ))}
                   </div>

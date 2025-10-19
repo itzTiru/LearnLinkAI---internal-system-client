@@ -178,6 +178,14 @@ export default function SearchResultsPage() {
     }
   };
 
+  const handleAddToLearningPath = () => {
+    const params = new URLSearchParams({
+      q: title,
+      aiMode: 'true'
+    });
+    router.push(`search/?${params.toString()}`);
+  };
+
   const handleTopicClick = async (topic) => {
     try {
       const response = await fetch('http://localhost:8000/topic-description', {
@@ -413,13 +421,14 @@ export default function SearchResultsPage() {
                   {platform === 'youtube' ? '▶ Watch Video' : '🔗 Visit Website'}
                 </a>
                 <button
+                  onClick={handleAddToLearningPath}
                   className={`px-6 py-3 rounded-lg font-medium transition-all ${
                     aiMode
                       ? 'bg-gray-700/80 border border-gray-600 text-white hover:bg-gray-600/80'
                       : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-400'
                   }`}
                 >
-                  📚 Add to Learning Path
+                  📚 Explore more
                 </button>
                 <button
                   onClick={handleBookmark}
